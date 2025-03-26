@@ -2,8 +2,11 @@
 import argparse
 import asyncio
 import json
+import subprocess
+import time
 
 from ccload.core import _print_results, load_tester
+from ccload.distributed_load_test import run_distributed_load_test
 from ccload.request_script import script_load_tester
 
 
@@ -84,6 +87,19 @@ def _cli() -> None:
         default=None,
     )
 
+    distribution_group = parser.add_argument_group("Distributed Options")
+    distribution_group.add_argument(
+        "--distributed",
+        help="Enable distributed load testing",
+        action="store_true",
+    )
+    distribution_group.add_argument(
+        "--distributed-workers",
+        help="Number of distributed workers to use",
+        type=int,
+        default=1,
+    )
+
     args = parser.parse_args()
 
     url = args.url_option if args.url_option is not None else args.url_positional
@@ -124,25 +140,55 @@ def _cli() -> None:
         notify_format_error("Only one of URL, file, or script can be provided.")
         return
 
-    # Process file input
-    if args.file is not None:
-        urls = args.file.read().splitlines()
-        for test_url in urls:
-            results = asyncio.run(
-                load_tester(
-                    test_url,
-                    args.number,
-                    args.concurrency,
-                    method=args.method,
-                    headers=headers,
-                    json_data=json_data,
-                ),
-            )
-            _print_results(results, test_url, args.export, args.output)
-        return
-
-    # Process single URL
     if url is not None:
+        if args.distributed:
+            worker_list = []
+            worker_processes = []
+
+            if args.distributed_workers > 0:
+                base_port = 8001
+                ports = list(range(base_port, base_port + args.distributed_workers))
+                worker_list = [f"http://127.0.0.1:{port}" for port in ports]
+
+                print(f"Spawning {args.distributed_workers} local worker servers...")
+                for port in ports:
+                    proc = subprocess.Popen(
+                        [
+                            "uvicorn", "ccload.worker_server:app",
+                            "--host", "127.0.0.1",
+                            "--port", str(port),
+                        ],
+                        stdout=subprocess.DEVNULL,
+                        stderr=subprocess.DEVNULL,
+                    )
+                    worker_processes.append(proc)
+
+                time.sleep(2)  # Wait for workers to be ready
+
+            elif args.workers:
+                worker_list = [w.strip() for w in args.workers.split(",")]
+            else:
+                notify_format_error("You must provide --workers or --distributed-workers")
+                return
+
+            results_list = run_distributed_load_test(
+                url=url,
+                n_request=args.number,
+                n_concurrency=args.concurrency,
+                method=args.method,
+                headers=headers,
+                json_data=json_data,
+                workers=worker_list,
+            )
+
+            if worker_processes:
+                for proc in worker_processes:
+                    proc.terminate()
+
+            for result in results_list:
+                _print_results(result, url, args.export, args.output)
+            return
+
         results = asyncio.run(
             load_tester(
                 url,
@@ -154,4 +200,3 @@ def _cli() -> None:
             ),
         )
         _print_results(results, url, args.export, args.output)
-
