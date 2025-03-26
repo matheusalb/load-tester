@@ -36,11 +36,11 @@ def test_calculate_statistics_success() -> None:
         raise AssertionError
     if stats["failed_requests"] != 0:
         raise AssertionError
-    if stats["request_time_min"] != pytest.approx(0.1, 0.01):  # noqa: PLR2004
+    if stats["request_time_min"] != pytest.approx(0.1, 0.01):
         raise AssertionError
-    if stats["request_time_max"] != pytest.approx(0.2, 0.01):  # noqa: PLR2004
+    if stats["request_time_max"] != pytest.approx(0.2, 0.01):
         raise AssertionError
-    if stats["request_time_mean"] != pytest.approx(0.15, 0.01):  # noqa: PLR2004
+    if stats["request_time_mean"] != pytest.approx(0.15, 0.01):
         print(stats["request_time_mean"])
         raise AssertionError
     if stats["requests_per_second"] != pytest.approx(6.67, 0.01):

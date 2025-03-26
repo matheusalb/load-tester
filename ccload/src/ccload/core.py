@@ -5,12 +5,23 @@ from typing import Any
 
 import aiohttp
 
+from ccload.metric_exporter import export_metrics
 
-async def read_url(url: str, session: aiohttp.ClientSession) -> dict[str, Any]:
+
+async def read_url(
+    url: str, session: aiohttp.ClientSession,
+    method: str = "GET", headers: dict[str, str] | None = None,
+    json_data: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     """Read a URL and return the status code and time taken."""
     start_time = time.perf_counter()
 
-    async with session.get(url) as response:
+    async with session.request(
+        method, url,
+        headers=headers,
+        json=json_data,
+        ssl=False,
+    ) as response:
         await response.content.read(1)
         ttfb = time.perf_counter() - start_time  # Time to first byte
         await response.read()
@@ -109,22 +120,37 @@ def _calculate_statistics(
     return statistics
 
 
-async def load_tester(url: str, n_request: int, n_concurrency: int) -> dict[str, Any]:
+async def load_tester(  # noqa: PLR0913
+    url: str, n_request: int, n_concurrency: int,
+    method: str = "GET", headers: dict[str, str] | None = None,
+    json_data: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     """Run a load test on a URL."""
     results: list = []
     connector = aiohttp.TCPConnector(limit=n_concurrency)
 
     start_time = time.perf_counter()
     async with aiohttp.ClientSession(connector=connector) as session:
-        tasks = [read_url(url, session) for _ in range(n_request)]
+        tasks = [read_url(
+            url=url,
+            session=session,
+            method=method,
+            headers=headers,
+            json_data=json_data,
+        ) for _ in range(n_request)]
         results = await asyncio.gather(*tasks, return_exceptions=True)
     total_time = time.perf_counter() - start_time
 
     return _calculate_statistics(results, total_time)
 
 
-def _print_results(results: dict[str, Any]) -> None:
+def _print_results(
+    results: dict[str, Any], name: str | None = None,
+    export_format: str | None = None, output_path: str | None = None,
+) -> None:
     """Print the results of the load test."""
+    if name:
+        print(f"-> Testing URL: {name}")
     print("\nResults:")
     print(
         " Total Requests (2XX).......................:",
@@ -151,3 +177,7 @@ def _print_results(results: dict[str, Any]) -> None:
         f"{results['ttlb_min']:.2f}, {results['ttlb_max']:.2f}, "
         f"{results['ttlb_mean']:.2f}",
     )
+    print("-" * 80)
+
+    if export_format and output_path:
+        export_metrics(results, export_format, output_path)

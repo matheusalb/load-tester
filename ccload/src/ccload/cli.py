@@ -1,23 +1,64 @@
 """ccload - A simple load tester for HTTP servers."""
 import argparse
 import asyncio
+import json
 
 from ccload.core import _print_results, load_tester
+from ccload.request_script import script_load_tester
 
 
 def _cli() -> None:
     """Command-line interface for ccload."""
     parser = argparse.ArgumentParser()
 
-    parser.add_argument("url_positional", nargs="?", help="URL to test", default=None)
-
-    parser.add_argument(
+    url_group = parser.add_argument_group("URL Options")
+    url_group.add_argument(
+        "url_positional", nargs="?",
+        help="URL to test", default=None,
+    )
+    url_group.add_argument(
         "-u",
         "--url",
         help="URL to test (alternative to positional argument)",
         dest="url_option",
         default=None,
     )
+    url_group.add_argument(
+        "-f",
+        "--file",
+        help="File containing URLs to test (one per line)",
+        type=argparse.FileType("r"),
+        default=None,
+    )
+    url_group.add_argument(
+        "-s",
+        "--script",
+        help="Script file with request definitions (JSON)",
+        type=str,
+        default=None,
+    )
+
+    request_group = parser.add_argument_group("Request Options")
+    request_group.add_argument(
+        "-m",
+        "--method",
+        help="HTTP method to use (GET, POST, PUT, etc.)",
+        type=str,
+        default="GET",
+    )
+    request_group.add_argument(
+        "--headers",
+        help="HTTP headers in JSON format",
+        type=str,
+        default=None,
+    )
+    request_group.add_argument(
+        "--json",
+        help="JSON data to send with POST/PUT requests",
+        type=str,
+        default=None,
+    )
+
     parser.add_argument(
         "-n", "--number", help="Number of requests to make", type=int, default=10,
     )
@@ -28,11 +69,18 @@ def _cli() -> None:
         type=int,
         default=1,
     )
-    parser.add_argument(
-        "-f",
-        "--file",
-        help="File containing URLs to test (one per line)",
-        type=argparse.FileType("r"),
+
+    export_group = parser.add_argument_group("Export Options")
+    export_group.add_argument(
+        "--export",
+        help="Export metrics in specified format (json, csv, prometheus, influxdb)",
+        choices=["json", "csv", "prometheus", "influxdb"],
+        default=None,
+    )
+    export_group.add_argument(
+        "--output",
+        help="Output file path for exported metrics",
+        type=str,
         default=None,
     )
 
@@ -42,25 +90,68 @@ def _cli() -> None:
 
     def notify_format_error(msg: str) -> None:
         """Print an error message and the help message."""
-        print(msg)
+        print(f"Error: {msg}")
         parser.print_help()
 
-    if url is None and args.file is None:
-        notify_format_error("Error: URL or file must be provided.")
-        return
-    if url is not None and args.file is not None:
-        notify_format_error("Error: Only one of URL or file can be provided.")
+    # Process headers and JSON data if provided
+    headers = None
+    if args.headers:
+        try:
+            headers = json.loads(args.headers)
+        except json.JSONDecodeError:
+            notify_format_error("Headers must be valid JSON")
+
+    json_data = None
+    if args.json:
+        try:
+            json_data = json.loads(args.json)
+        except json.JSONDecodeError:
+            notify_format_error("JSON data must be valid JSON")
+
+    if args.script:
+        print(f"Running script test from: {args.script}")
+        results = asyncio.run(script_load_tester(args.script))
+        for url, result in results.items():
+            _print_results(result, url, args.export, args.output)
         return
 
+    # Check for mutually exclusive options
+    input_count = sum(1 for x in [url, args.file, args.script] if x is not None)
+    if input_count == 0:
+        notify_format_error("URL, file, or script must be provided.")
+        return
+    if input_count > 1:
+        notify_format_error("Only one of URL, file, or script can be provided.")
+        return
+
+    # Process file input
     if args.file is not None:
         urls = args.file.read().splitlines()
-        for url in urls:
-            print("-" * 80)
-            print(f"Testing URL: {url}")
-            results = asyncio.run(load_tester(url, args.number, args.concurrency))
-            _print_results(results)
+        for test_url in urls:
+            results = asyncio.run(
+                load_tester(
+                    test_url,
+                    args.number,
+                    args.concurrency,
+                    method=args.method,
+                    headers=headers,
+                    json_data=json_data,
+                ),
+            )
+            _print_results(results, test_url, args.export, args.output)
         return
 
+    # Process single URL
     if url is not None:
-        results = asyncio.run(load_tester(url, args.number, args.concurrency))
-        _print_results(results)
+        results = asyncio.run(
+            load_tester(
+                url,
+                args.number,
+                args.concurrency,
+                method=args.method,
+                headers=headers,
+                json_data=json_data,
+            ),
+        )
+        _print_results(results, url, args.export, args.output)
+
