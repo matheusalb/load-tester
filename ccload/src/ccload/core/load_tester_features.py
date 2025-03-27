@@ -18,7 +18,6 @@ async def read_url(
         method, url,
         headers=headers,
         json=json_data,
-        ssl=False,
     ) as response:
         await response.content.read(1)
         ttfb = time.perf_counter() - start_time  # Time to first byte
