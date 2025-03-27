@@ -115,6 +115,15 @@ def _calculate_statistics(
         if total_time > 0 else 0
     )
 
+    # Reset min/max values to 0 if no successful requests
+    if statistics["successful_requests"] == 0:
+        statistics["request_time_min"] = 0
+        statistics["request_time_max"] = 0
+        statistics["ttfb_min"] = 0
+        statistics["ttfb_max"] = 0
+        statistics["ttlb_min"] = 0
+        statistics["ttlb_max"] = 0
+
     return statistics
 
 
