@@ -213,14 +213,16 @@ def _run_distributed_test(
         notify_format_error("You must provide --workers or --distributed-workers")
         return
 
-    results_list = run_distributed_load_test(
-        url=url,
-        n_request=args.number,
-        n_concurrency=args.concurrency,
-        method=args.method,
-        headers=headers,
-        json_data=json_data,
-        workers=worker_list,
+    results_list = asyncio.run(
+        run_distributed_load_test(
+            url=url,
+            n_request=args.number,
+            n_concurrency=args.concurrency,
+            method=args.method,
+            headers=headers,
+            json_data=json_data,
+            workers=worker_list,
+        ),
     )
 
     if worker_processes:

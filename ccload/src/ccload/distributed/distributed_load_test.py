@@ -1,26 +1,26 @@
-import concurrent.futures
-import json
+"""Distributed load test module."""
+import asyncio
 from typing import Any
 
-import requests
+import aiohttp
 
 
-def send_task(worker_url: str, payload: dict) -> dict:
+async def send_task(
+    session: aiohttp.ClientSession,
+    worker_url: str,
+    payload: dict[str, Any],
+) -> dict[str, Any]:
     """Send a task to a worker."""
     try:
         print(f"Sending to {worker_url} with {payload['n_request']} requests")
-        response = requests.post(
-            f"{worker_url}/run-test",
-            json=payload,
-            timeout=30,
-        )
-        response.raise_for_status()
-        return response.json()
-    except requests.exceptions.RequestException as e:
+        async with session.post(f"{worker_url}/run-test", json=payload) as response:
+            response.raise_for_status()
+            return await response.json()
+    except aiohttp.ClientError as e:
         print(f"Failed to contact {worker_url}: {e}")
         return {}
 
-def run_distributed_load_test(  # noqa: PLR0913
+async def run_distributed_load_test(  # noqa: PLR0913
     url: str, n_request: int, n_concurrency: int,
     method: str = "GET", headers: dict[str, str] | None = None,
     json_data: dict[str, Any] | None = None,
@@ -47,10 +47,11 @@ def run_distributed_load_test(  # noqa: PLR0913
         }
         payloads.append(payload)
 
-    with concurrent.futures.ThreadPoolExecutor() as executor:
-        futures = [
-            executor.submit(send_task, worker_url, payload)
+    timeout = aiohttp.ClientTimeout(total=60)
+    async with aiohttp.ClientSession(timeout=timeout) as session:
+        tasks = [
+            send_task(session, worker_url, payload)
             for worker_url, payload in zip(workers, payloads, strict=False)
         ]
-        return [future.result() for future in futures if future.result()]
-
+        results = await asyncio.gather(*tasks)
+        return [result for result in results if result]

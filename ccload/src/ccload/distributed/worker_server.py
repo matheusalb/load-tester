@@ -1,6 +1,5 @@
 """Worker server for ccload."""
 
-import asyncio
 from typing import Any
 
 from fastapi import FastAPI, Request
@@ -10,7 +9,7 @@ from ccload.core import load_tester
 app = FastAPI()
 
 @app.post("/run-test")
-async def run_test(request: Request) -> Any:
+async def run_test(request: Request) -> dict[str, Any]:
     """Run a load test."""
     payload = await request.json()
     return await load_tester(
