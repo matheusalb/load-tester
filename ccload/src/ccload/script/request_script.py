@@ -7,7 +7,7 @@ from typing import Any
 
 import aiohttp
 
-from ccload.core import _calculate_statistics, read_url
+from ccload.core.load_tester_features import _calculate_statistics, read_url
 
 
 class RequestScript:

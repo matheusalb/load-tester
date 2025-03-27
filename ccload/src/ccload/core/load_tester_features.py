@@ -33,7 +33,7 @@ async def read_url(
 
 
 def _calculate_statistics(
-    results: list[dict[str, Any]], total_time: float,
+    results: list[dict[str, Any] | Exception], total_time: float,
 ) -> dict[str, Any]:
     """Calculate statistics from the results of the load test."""
     statistics = {

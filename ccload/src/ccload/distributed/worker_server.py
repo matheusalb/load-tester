@@ -4,7 +4,7 @@ from typing import Any
 
 from fastapi import FastAPI, Request
 
-from ccload.core import load_tester
+from ccload.core.load_tester_features import load_tester
 
 app = FastAPI()
 

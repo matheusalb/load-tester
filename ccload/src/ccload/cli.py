@@ -8,10 +8,10 @@ import time
 from collections.abc import Callable
 from typing import Any
 
-from ccload.core import _display_results, load_tester
+from ccload.core.load_tester_features import _display_results, load_tester
 from ccload.distributed.distributed_load_test import run_distributed_load_test
 from ccload.exporters.metric_exporter import export_metrics
-from ccload.request_script import script_load_tester
+from ccload.script.request_script import script_load_tester
 
 
 def _handle_result(
