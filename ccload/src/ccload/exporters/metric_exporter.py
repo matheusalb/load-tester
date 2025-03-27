@@ -17,7 +17,7 @@ class MetricsExporter:
 
         """
         self.statistics = statistics
-        self.timestamp = datetime.now().isoformat()
+        self.timestamp = datetime.now().isoformat()  # noqa: DTZ005
 
     def to_json(self, output_path: str) -> None:
         """Export metrics to JSON format.

@@ -25,3 +25,4 @@ ccload = "ccload.__main__:main"
 
 [tool.ruff.lint]
 select = ["ALL"]
+ignore = ["T201"]

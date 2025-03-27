@@ -1,9 +1,9 @@
-import requests
+import concurrent.futures
 import json
-
 from typing import Any
 
-import concurrent.futures
+import requests
+
 
 def send_task(worker_url: str, payload: dict) -> dict:
     """Send a task to a worker."""
@@ -12,14 +12,15 @@ def send_task(worker_url: str, payload: dict) -> dict:
         response = requests.post(
             f"{worker_url}/run-test",
             json=payload,
+            timeout=30,
         )
         response.raise_for_status()
         return response.json()
-    except Exception as e:
+    except requests.exceptions.RequestException as e:
         print(f"Failed to contact {worker_url}: {e}")
         return {}
 
-def run_distributed_load_test(
+def run_distributed_load_test(  # noqa: PLR0913
     url: str, n_request: int, n_concurrency: int,
     method: str = "GET", headers: dict[str, str] | None = None,
     json_data: dict[str, Any] | None = None,
@@ -49,7 +50,7 @@ def run_distributed_load_test(
     with concurrent.futures.ThreadPoolExecutor() as executor:
         futures = [
             executor.submit(send_task, worker_url, payload)
-            for worker_url, payload in zip(workers, payloads)
+            for worker_url, payload in zip(workers, payloads, strict=False)
         ]
         return [future.result() for future in futures if future.result()]
 

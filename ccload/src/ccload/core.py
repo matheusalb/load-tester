@@ -5,8 +5,6 @@ from typing import Any
 
 import aiohttp
 
-from ccload.metric_exporter import export_metrics
-
 
 async def read_url(
     url: str, session: aiohttp.ClientSession,
@@ -144,10 +142,7 @@ async def load_tester(  # noqa: PLR0913
     return _calculate_statistics(results, total_time)
 
 
-def _print_results(
-    results: dict[str, Any], name: str | None = None,
-    export_format: str | None = None, output_path: str | None = None,
-) -> None:
+def _display_results(results: dict[str, Any], name: str | None = None) -> None:
     """Print the results of the load test."""
     if name:
         print(f"-> Testing URL: {name}")
@@ -178,6 +173,3 @@ def _print_results(
         f"{results['ttlb_mean']:.2f}",
     )
     print("-" * 80)
-
-    if export_format and output_path:
-        export_metrics(results, export_format, output_path)
