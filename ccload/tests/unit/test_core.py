@@ -5,30 +5,30 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from ccload.core import load_tester
+from ccload.core.load_tester_features import load_tester
 
-key_columns = [
-    "total_requests","successful_requests","failed_requests",
-    "request_time_min","request_time_max","request_time_mean",
-    "ttfb_min","ttfb_max","ttfb_mean","ttlb_min","ttlb_max",
-    "ttlb_mean","requests_per_second",
-]
 
-@patch("ccload.core.aiohttp.ClientSession")
+@patch("ccload.core.load_tester_features.aiohttp.ClientSession")
 def test_structure(
     mock_session_cls: MagicMock,
     mock_client_session_factory: Callable[[int], MagicMock],
     test_url: str,
 ) -> None:
     """Test the structure of the returned statistics."""
+    key_columns = [
+        "total_requests","successful_requests","failed_requests",
+        "request_time_min","request_time_max","request_time_mean",
+        "ttfb_min","ttfb_max","ttfb_mean","ttlb_min","ttlb_max",
+        "ttlb_mean","requests_per_second",
+    ]
+
     mock_session_cls.return_value = mock_client_session_factory(200)
 
     stats = asyncio.run(load_tester(test_url, 1, 1))
     if set(stats.keys()) != set(key_columns):
         raise AssertionError
 
-
-@patch("ccload.core.aiohttp.ClientSession")
+@patch("ccload.core.load_tester_features.aiohttp.ClientSession")
 def test_successful_requests(
     mock_session_cls: MagicMock,
     mock_client_session_factory: Callable[[int], MagicMock],
@@ -45,7 +45,7 @@ def test_successful_requests(
     if stats["total_requests"] != 1:
         raise AssertionError
 
-@patch("ccload.core.aiohttp.ClientSession")
+@patch("ccload.core.load_tester_features.aiohttp.ClientSession")
 def test_failed_request(
     mock_session_cls: MagicMock,
     mock_client_session_factory: Callable[[int], MagicMock],
@@ -62,7 +62,7 @@ def test_failed_request(
     if stats["total_requests"] != 1:
         raise AssertionError
 
-@patch("ccload.core.aiohttp.ClientSession")
+@patch("ccload.core.load_tester_features.aiohttp.ClientSession")
 def test_multiple_requests(
     mock_session_cls: MagicMock,
     mock_client_session_factory: Callable[[int], MagicMock],
@@ -81,7 +81,7 @@ def test_multiple_requests(
         raise AssertionError
 
 @pytest.mark.parametrize("concurrency", [1, 5, 10])
-@patch("ccload.core.aiohttp.ClientSession")
+@patch("ccload.core.load_tester_features.aiohttp.ClientSession")
 def test_concurrency(
     mock_session_cls: MagicMock,
     mock_client_session_factory: Callable[[int], MagicMock],

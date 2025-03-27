@@ -1,7 +1,9 @@
 """"Unit tests for the stats methods."""
+from typing import Any
+
 import pytest
 
-from ccload.core import _calculate_statistics
+from ccload.core.load_tester_features import _calculate_statistics
 
 
 def test_calculate_statistics_empty() -> None:
@@ -41,7 +43,6 @@ def test_calculate_statistics_success() -> None:
     if stats["request_time_max"] != pytest.approx(0.2, 0.01):
         raise AssertionError
     if stats["request_time_mean"] != pytest.approx(0.15, 0.01):
-        print(stats["request_time_mean"])
         raise AssertionError
     if stats["requests_per_second"] != pytest.approx(6.67, 0.01):
         raise AssertionError
@@ -50,7 +51,7 @@ def test_calculate_statistics_success() -> None:
 def test_calculate_statistics_failures() -> None:
     """Test statistics calculation with failures."""
     # Mix of successful, failed, and exception results
-    results = [
+    results: list[dict[str, Any] | Exception] = [
         {"status": 200, "request_time": 0.1, "ttfb": 0.05, "ttlb": 0.08},
         {"status": 500, "request_time": 0.2, "ttfb": 0.10, "ttlb": 0.15},
         Exception("Connection error"),
