@@ -22,7 +22,7 @@ Requires Python 3.12 or higher.
 
 ```bash
 # Clone the repository
-git clone https://github.com/username/load-tester.git
+git clone https://github.com/matheusalb/load-tester.git
 cd load-tester/ccload
 
 # Install with poetry
