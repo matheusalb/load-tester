@@ -71,10 +71,6 @@ async def script_load_tester(script_path: str) -> dict[str, dict[str, Any]]:
         script_path: Path to the script file.
         n_concurrency: Number of concurrent requests.
 
-        if not isinstance(data, list):
-            msg = "Script must be a list of requests"
-            raise TypeError(msg)
-
     """
     script = RequestScript(script_path)
     requests = script.get_requests()
